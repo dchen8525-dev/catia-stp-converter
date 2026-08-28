@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CATIA 模型转 STEP</title>
+<style>
+  :root{--bg:#f5f7fa;--card:#fff;--line:#e3e8ef;--text:#1f2937;--muted:#6b7280;--blue:#185FA5;--green:#3B6D11;--red:#A32D2D;--amber:#BA7517;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 16px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:.15s}
+  .drop:hover{border-color:var(--blue);background:#f0f6ff}
+  .drop b{color:var(--blue)}
+  .hint{color:var(--muted);font-size:12px;margin-top: 8px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:500}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500}
+  .b-pending{background:#eef2ff;color:#3730a3}
+  .b-processing{background:#fff7e6;color:#946800}
+  .b-done{background:#e6f4ea;color:#1e7e34}
+  .b-failed{background:#fdecea;color:#a32d2d}
+  .b-expired{background:#e5e7eb;color:#6b7280}
+  a.btn{display:inline-block;padding:5px 12px;background:var(--blue);color:#fff;border-radius:8px;text-decoration:none;font-size:12px}
+  a.btn:hover{opacity:.9}
+  .btn-sm{padding:3px 8px;font-size:12px;border-radius:7px;background:#fff;border:1px solid var(--line);color:var(--blue);text-decoration:none;cursor:pointer}
+  .btn-sm:hover{border-color:var(--blue)}
+  .err{color:var(--red);font-size:12px;margin-top:6px}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  button.ghost{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px}
+  button.ghost:hover{border-color:var(--blue)}
+  .files{font-size:12px;color:var(--muted);margin-top:4px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;cursor:pointer;margin:2px 4px 2px 0;user-select:none;background:#fff}
+  .chip.on{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
+  .chip input{margin:0}
+  .roots-box{display:flex;flex-direction:column;gap:5px}
+  .roots-box .meta{color:var(--muted);font-size:11px}
+  .steps{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .steps a{font-size:12px}
+  .tip{font-size:11px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CATIA 模型转 STEP</h1>
+  <div class="sub">上传 CATIA 三维模型（.CATPart 零件 / .CATProduct 产品）。多个产品时自动探测「根装配」并各自导出 STEP；也可手动勾选要导出的根。</div>
+
+  <div class="card">
+    <div class="drop" id="drop">
+      <div>把 <b>.CATPart</b> / <b>.CATProduct</b> 文件拖到这里，或 <b>点击选择</b></div>
+      <div class="hint">建议一次上传一个模型的<b>全部</b>文件（产品 + 其引用的零件）；可多选，后台串行逐个转换</div>
+      <input type="file" id="file" accept=".catpart,.catproduct" multiple hidden />
+    </div>
+    <div class="err" id="uploadErr"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <strong>任务列表</strong>
+      <span>
+        <label style="font-size:12px;color:var(--muted);margin-right:8px"><input type="checkbox" id="selectAll" /> 全选</label>
+        <button class="ghost" id="downloadSel" disabled>下载所选(<span id="selCount">0</span>)</button>
+        <button class="ghost" id="refresh">刷新</button>
+      </span>
+    </div>
+    <table>
+      <thead><tr><th style="width:32px"></th><th>ID</th><th>文件名</th><th>状态</th><th>根产品 / 导出项</th><th>队列位</th><th>提交时间</th><th>操作</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="8" style="color:var(--muted)">暂无任务</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const drop = $('#drop'), file = $('#file'), errBox = $('#uploadErr'), rows = $('#rows');
+const selectAll = $('#selectAll'), downloadSel = $('#downloadSel'), selCount = $('#selCount');
+let timers = {};
+
+drop.addEventListener('click', () => file.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = 'var(--blue)'; });
+drop.addEventListener('dragleave', () => drop.style.borderColor = '');
+drop.addEventListener('drop', e => { e.preventDefault(); drop.style.borderColor = ''; if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files); });
+file.addEventListener('change', () => { if (file.files.length) uploadFiles(file.files); });
+
+async function uploadFiles(files) {
+  errBox.textContent = '';
+  const list = Array.from(files).filter(f => /\.(catpart|catproduct)$/i.test(f.name));
+  if (!list.length) { errBox.textContent = '没有 .CATPart / .CATProduct 文件'; return; }
+  const fd = new FormData();
+  for (const f of list) fd.append('files', f);
+  try {
+    const r = await fetch('/api/upload-batch', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!r.ok) { errBox.textContent = j.error || '上传失败'; return; }
+    file.value = '';
+    await load();
+    watch(j.jobId);
+  } catch (e) { errBox.textContent = '上传出错: ' + e.message; }
+}
+
+function badge(s) {
+  const m = {
+    pending: ['b-pending', '排队中'], processing: ['b-processing', '转换中'],
+    done: ['b-done', '完成'], failed: ['b-failed', '失败'], expired: ['b-expired', '已失效']
+  };
+  const [c, t] = m[s] || ['', '未知'];
+  return `<span class="badge ${c}">${t}</span>`;
+}
+function fmt(t) { return t ? new Date(t).toLocaleString('zh-CN') : '-'; }
+function esc(s) { return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+const sel = new Set();
+function refreshSel() {
+  selCount.textContent = sel.size;
+  downloadSel.disabled = sel.size === 0;
+  const cbs = rows.querySelectorAll('input.sel');
+  selectAll.checked = cbs.length > 0 && Array.from(cbs).every(cb => cb.checked);
+}
+rows.addEventListener('change', (e) => {
+  if (!e.target.classList.contains('sel')) return;
+  const id = +e.target.dataset.id;
+  if (e.target.checked) sel.add(id); else sel.delete(id);
+  refreshSel();
+});
+selectAll.addEventListener('change', () => {
+  rows.querySelectorAll('input.sel').forEach(cb => { cb.checked = selectAll.checked; });
+  if (selectAll.checked) rows.querySelectorAll('input.sel').forEach(cb => sel.add(+cb.dataset.id));
+  else sel.clear();
+  refreshSel();
+});
+downloadSel.addEventListener('click', () => {
+  if (!sel.size) return;
+  const a = document.createElement('a');
+  a.href = '/api/download-batch?ids=' + Array.from(sel).join(',');
+  a.rel = 'noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+// 改选要导出的根并重新入队（手动覆盖自动探测）
+async function applyRoots(id, roots) {
+  await fetch(`/api/jobs/${id}/select-roots`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roots })
+  });
+  await load();
+  watch(id);
+}
+
+async function load() {
+  const r = await fetch('/api/jobs?limit=100');
+  const list = await r.json();
+  if (!list.length) { rows.innerHTML = '<tr><td colspan="8" style="color:var(--muted)">暂无任务</td></tr>'; return; }
+  rows.innerHTML = list.map(rowHtml).join('');
+  bindRootChips();
+  list.forEach(j => { if (j.status === 'pending' || j.status === 'processing') watch(j.id, true); });
+  refreshSel();
+}
+
+// 当前某任务“应导出”的根集合：若后端记录了 selected_roots 用手动值，否则默认全选所有根
+function activeRoots(j) {
+  const meta = j.meta || {};
+  if (Array.isArray(j.selected_roots)) return j.selected_roots;
+  return (j.roots && j.roots.length) ? j.roots : (meta.parts || []);
+}
+
+function rowHtml(j) {
+  const meta = j.meta || {};
+  const files = Array.isArray(meta.files) ? meta.files.map(f => f.filename) : [];
+  const roots = (j.roots && j.roots.length) ? j.roots : (meta.parts || []);
+  const active = activeRoots(j);
+
+  const fileLine = files.length
+    ? `<div class="files">${files.map(esc).join('、')}</div>` : '';
+
+  // 根产品多选 chips
+  let rootsBox;
+  if (roots.length) {
+    const chips = roots.map(r => {
+      const on = active.includes(r) ? ' on' : '';
+      const checked = active.includes(r) ? 'checked' : '';
+      return `<label class="chip${on}"><input type="checkbox" class="root-chk" data-id="${j.id}" value="${esc(r)}" ${checked}/>${esc(r)}</label>`;
+    }).join('');
+    const ctrl = roots.length > 1
+      ? ` <button class="btn-sm" data-reconv="${j.id}">↻ 重转勾选的根</button>`
+      : '';
+    rootsBox = `<div class="roots-box">${chips}${ctrl}<div class="meta">默认导出全部根；取消勾选可跳过某个装配</div></div>`;
+  } else {
+    rootsBox = '<span class="tip">无产品/零件</span>';
+  }
+
+  // 操作列：已完成 -> 每个 STEP 单独下载 + 全部(zip)；失败 -> 错误
+  let act;
+  if (j.status === 'done' && j.steps && j.steps.length) {
+    const links = j.steps.map((s, i) => `<a class="btn-sm" href="/api/download/${j.id}/${i}">${esc(s.split('/').pop())}</a>`).join(' ');
+    const all = j.steps.length > 1 ? ` <a class="btn-sm" href="/api/download/${j.id}">全部(zip)</a>` : '';
+    act = `<div class="steps">${links}${all}</div>`;
+  } else if (j.status === 'failed') {
+    act = `<span class="err">${esc(j.error || '')}</span>`;
+  } else {
+    act = '-';
+  }
+
+  const cb = (j.status === 'done') ? `<input type="checkbox" class="sel" data-id="${j.id}" ${sel.has(j.id) ? 'checked' : ''} />` : '';
+  const qpos = j.queue_position == null ? '-' : `第 ${j.queue_position} 位`;
+  return `<tr data-id="${j.id}"><td>${cb}</td><td>#${j.id}</td><td>${esc(j.original_name)}${fileLine}</td><td>${badge(j.status)}</td><td>${rootsBox}</td><td>${qpos}</td><td>${fmt(j.created_at)}</td><td>${act}</td></tr>`;
+}
+
+function bindRootChips() {
+  rows.querySelectorAll('button[data-reconv]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = +btn.dataset.reconv;
+      const checked = Array.from(rows.querySelectorAll(`input.root-chk[data-id="${id}"]:checked`)).map(c => c.value);
+      applyRoots(id, checked);
+    });
+  });
+}
+
+async function watch(id, skipBind) {
+  if (timers[id]) return;
+  const tick = async () => {
+    try {
+      const r = await fetch('/api/jobs/' + id);
+      const j = await r.json();
+      const tr = rows.querySelector(`tr[data-id="${id}"]`);
+      if (tr) { tr.outerHTML = rowHtml(j); bindRootChips(); }
+      refreshSel();
+      if (j.status === 'done' || j.status === 'failed' || j.status === 'expired') {
+        clearInterval(timers[id]); delete timers[id];
+      }
+    } catch (e) {}
+  };
+  timers[id] = setInterval(tick, 1500);
+  tick();
+}
+
+$('#refresh').addEventListener('click', load);
+bindRootChips();
+load();
+</script>
+</body>
+</html>

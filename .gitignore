@@ -1,0 +1,11 @@
+node_modules/
+data/
+uploads/
+results/
+server.log
+*.log
+_stray_old_vbs_bak
+/tmp
+_fixtures/
+_dl/
+.workbuddy/
