@@ -35,7 +35,7 @@
   button.ghost{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px}
   button.ghost:hover{border-color:var(--blue)}
   .files{font-size:12px;color:var(--muted);margin-top:4px}
-  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;cursor:pointer;margin:2px 4px 2px 0;user-select:none;background:#fff}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px;cursor:pointer;margin:2px 4px 2px 0;user-select:none;background:#fff;max-width:100%;min-width:0;word-break:break-all;line-height:1.4}
   .chip.on{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
   .chip input{margin:0}
   .roots-box{display:flex;flex-direction:column;gap:5px}
@@ -69,8 +69,8 @@
       </span>
     </div>
     <table>
-      <colgroup><col style="width:34px"><col style="width:44px"><col style="width:170px"><col style="width:58px"><col style="width:288px"><col style="width:56px"><col style="width:82px"><col style="width:198px"></colgroup>
-      <thead><tr><th style="width:34px"></th><th style="width:44px">ID</th><th style="width:170px">文件名</th><th style="width:58px">状态</th><th style="width:288px">根产品 / 导出项</th><th style="width:56px">队列位</th><th style="width:82px">提交时间</th><th style="width:198px">操作</th></tr></thead>
+      <colgroup><col style="width:34px"><col style="width:44px"><col style="width:150px"><col style="width:76px"><col style="width:260px"><col style="width:76px"><col style="width:82px"><col style="width:208px"></colgroup>
+      <thead><tr><th style="width:34px"></th><th style="width:44px">ID</th><th style="width:150px">文件名</th><th style="width:76px">状态</th><th style="width:260px">根产品 / 导出项</th><th style="width:76px">队列位</th><th style="width:82px">提交时间</th><th style="width:208px">操作</th></tr></thead>
       <tbody id="rows"><tr><td colspan="8" style="color:var(--muted)">暂无任务</td></tr></tbody>
     </table>
   </div>
