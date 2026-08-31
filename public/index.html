@@ -16,7 +16,8 @@
   .drop:hover{border-color:var(--blue);background:#f0f6ff}
   .drop b{color:var(--blue)}
   .hint{color:var(--muted);font-size:12px;margin-top: 8px}
-  table{width:100%;border-collapse:collapse;font-size:13px}
+  table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+  td:nth-child(3){overflow-wrap:anywhere}
   th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:500}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500}
@@ -40,7 +41,7 @@
   .roots-box{display:flex;flex-direction:column;gap:5px}
   .roots-box .meta{color:var(--muted);font-size:11px}
   .steps{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-  .steps a{font-size:12px}
+  .steps a{font-size:12px;max-width:100%;min-width:0;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
   .tip{font-size:11px;color:var(--muted);margin-top:4px}
 </style>
 </head>
@@ -68,7 +69,8 @@
       </span>
     </div>
     <table>
-      <thead><tr><th style="width:32px"></th><th>ID</th><th>文件名</th><th>状态</th><th>根产品 / 导出项</th><th>队列位</th><th>提交时间</th><th>操作</th></tr></thead>
+      <colgroup><col style="width:34px"><col style="width:44px"><col style="width:170px"><col style="width:58px"><col style="width:288px"><col style="width:56px"><col style="width:82px"><col style="width:198px"></colgroup>
+      <thead><tr><th style="width:34px"></th><th style="width:44px">ID</th><th style="width:170px">文件名</th><th style="width:58px">状态</th><th style="width:288px">根产品 / 导出项</th><th style="width:56px">队列位</th><th style="width:82px">提交时间</th><th style="width:198px">操作</th></tr></thead>
       <tbody id="rows"><tr><td colspan="8" style="color:var(--muted)">暂无任务</td></tr></tbody>
     </table>
   </div>
@@ -195,7 +197,8 @@ function rowHtml(j) {
   // 操作列：已完成 -> 每个 STEP 单独下载 + 全部(zip)；失败 -> 错误
   let act;
   if (j.status === 'done' && j.steps && j.steps.length) {
-    const links = j.steps.map((s, i) => `<a class="btn-sm" href="/api/download/${j.id}/${i}">${esc(s.split('/').pop())}</a>`).join(' ');
+    const nm = (s) => esc(String(s).split(/[\\/]/).pop());
+    const links = j.steps.map((s, i) => `<a class="btn-sm" href="/api/download/${j.id}/${i}" title="${nm(s)}">${nm(s)}</a>`).join(' ');
     const all = j.steps.length > 1 ? ` <a class="btn-sm" href="/api/download/${j.id}">全部(zip)</a>` : '';
     act = `<div class="steps">${links}${all}</div>`;
   } else if (j.status === 'failed') {

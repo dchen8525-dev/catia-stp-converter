@@ -23,10 +23,15 @@ function classify(files) {
 
 // 调用 VBScript 驱动 CATIA 转换（cscript）；带超时看门狗。
 //
-// 与旧版不同：本版支持「多个根产品」各自导出一个 STEP。驱动会先扫描各产品
-// 的引用关系，判定哪些产品是「根（不被其它产品引用）」，再逐个导出。
-// 路径策略：CATIA V5 无法打开含非常规 Unicode 字符的路径，所以把所有上传文件
-// 先复制到一个干净的 ASCII 临时目录，再从该目录打开产品并导出 STEP。
+// 与旧版不同：本版支持「多个根产品」各自导出一个 STEP。
+// 驱动只会在需要时（存在 CATProduct 且未手动指定根）启动 CATIA 会话扫描引用，
+// 判定哪些是「根（不被其它产品引用）」；纯零件批次不启动会话。
+// 导出走 CATIA 官方无头批处理（CATSTART -> CATBatchStarter，Batch DXF-IGES-STEP），
+// 因为本机 doc.ExportData(..., "stp") 持续 E_FAIL（IGS 正常、GUI 正常），
+// 而批处理走另一条 C++ 转换路径，产出的 AP242 STEP 已验证有效。
+// 驱动最终回显 "ROOTS|..."（仅成功导出的根），本函数里把每个根与 outDir 中
+// 同名 basename 的 .stp 配对。路径策略：CATIA V5 无法打开含非常规 Unicode
+// 字符的路径，所以把所有上传文件先复制到一个干净的 ASCII 临时目录。
 function runDriver(batchFiles, outDir, timeoutMs, forcedRoots) {
   return new Promise((resolve, reject) => {
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'catia-stp-'));

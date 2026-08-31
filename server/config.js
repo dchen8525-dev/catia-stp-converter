@@ -13,8 +13,9 @@ module.exports = {
   // VBScript 驱动（cscript 运行）。见 catia.js：PowerShell 的 COM 绑定在本机对 CATIA 失效。
   driverScript: path.join(rootDir, 'server', 'catia-driver', 'convert.vbs'),
 
-  // 单 Worker 串行；CATIA 启动 + 转换可能很慢，给足超时（秒 → 毫秒）
-  catiaTimeoutMs: (parseInt(process.env.CATIA_TIMEOUT_SEC || '300', 10)) * 1000,
+  // 单 Worker 串行；逐根 CATBatch 启动 CATIA + 转换很慢（113MB 零件约 2.5min，
+  // 273MB 约 6min），默认给 15min（秒 → 毫秒）
+  catiaTimeoutMs: (parseInt(process.env.CATIA_TIMEOUT_SEC || '900', 10)) * 1000,
 
   // 失败后重试次数（不含首次）
   maxAttempts: parseInt(process.env.MAX_ATTEMPTS || '2', 10),
@@ -22,8 +23,8 @@ module.exports = {
   // Worker 空闲轮询间隔（毫秒）
   pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '2000', 10),
 
-  // 单文件大小上限（MB）
-  maxFileMB: parseInt(process.env.MAX_FILE_MB || '200', 10),
+  // 单文件大小上限（MB）；实测 D:\work 里大 CATPart 有 273MB
+  maxFileMB: parseInt(process.env.MAX_FILE_MB || '500', 10),
 
   // 是否随 Web 进程一起启动 Worker（同一台机器时设为 true 最方便）
   startWorker: process.env.START_WORKER !== 'false',
