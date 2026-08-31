@@ -181,7 +181,7 @@ function rowHtml(j) {
   // 文件名按名称排序展示（大小写不敏感、数字自然序）
   const sortedFiles = files.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
   const fileLine = files.length
-    ? `<div class="files">${sortedFiles.map(esc).join('、')}</div>` : '';
+    ? `<div class="files">${sortedFiles.map((n) => `<div>${esc(n)}</div>`).join('')}</div>` : '';
 
   // 根产品多选 chips
   let rootsBox;
