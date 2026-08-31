@@ -69,6 +69,10 @@ Set forcedRoots = CreateObject("Scripting.Dictionary")
 products.CompareMode    = vbTextCompare
 parts.CompareMode       = vbTextCompare
 forcedRoots.CompareMode = vbTextCompare
+' Shared roots dict: MUST exist before ConnectAndScan() fills it during the
+' scan phase (it runs before the main flow's root computation).
+Set roots = CreateObject("Scripting.Dictionary")
+roots.CompareMode = vbTextCompare
 group = "products"   ' products -> parts -> roots
 
 For k = 3 To WScript.Arguments.Count - 1
@@ -142,8 +146,7 @@ If Not fso.FileExists(catStart) Then
 End If
 
 ' --- compute roots -----------------------------------------------------------
-Set roots = CreateObject("Scripting.Dictionary")
-roots.CompareMode = vbTextCompare
+' roots dict already initialized at the top (ConnectAndScan may have filled it).
 If forcedRoots.Count > 0 Then
   For Each root In forcedRoots
     If products.Exists(root) Or parts.Exists(root) Then

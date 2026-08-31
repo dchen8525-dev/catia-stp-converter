@@ -166,17 +166,22 @@ async function load() {
 function activeRoots(j) {
   const meta = j.meta || {};
   if (Array.isArray(j.selected_roots)) return j.selected_roots;
-  return (j.roots && j.roots.length) ? j.roots : (meta.parts || []);
+  return (j.roots && j.roots.length) ? j.roots
+    : ((meta.roots && meta.roots.length) ? meta.roots : (meta.parts || []));
 }
 
 function rowHtml(j) {
   const meta = j.meta || {};
   const files = Array.isArray(meta.files) ? meta.files.map(f => f.filename) : [];
-  const roots = (j.roots && j.roots.length) ? j.roots : (meta.parts || []);
+  // 候选根：实际根 > 上传时的启发式根（产品优先）> 零件兜底
+  const roots = (j.roots && j.roots.length) ? j.roots
+    : ((meta.roots && meta.roots.length) ? meta.roots : (meta.parts || []));
   const active = activeRoots(j);
 
+  // 文件名按名称排序展示（大小写不敏感、数字自然序）
+  const sortedFiles = files.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
   const fileLine = files.length
-    ? `<div class="files">${files.map(esc).join('、')}</div>` : '';
+    ? `<div class="files">${sortedFiles.map(esc).join('、')}</div>` : '';
 
   // 根产品多选 chips
   let rootsBox;
@@ -187,7 +192,7 @@ function rowHtml(j) {
       return `<label class="chip${on}"><input type="checkbox" class="root-chk" data-id="${j.id}" value="${esc(r)}" ${checked}/>${esc(r)}</label>`;
     }).join('');
     const ctrl = roots.length > 1
-      ? ` <button class="btn-sm" data-reconv="${j.id}">↻ 重转勾选的根</button>`
+      ? ` <button class="btn-sm" data-reconv="${j.id}">↻ 重转勾选的根节点</button>`
       : '';
     rootsBox = `<div class="roots-box">${chips}${ctrl}<div class="meta">默认导出全部根；取消勾选可跳过某个装配</div></div>`;
   } else {

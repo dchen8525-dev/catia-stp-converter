@@ -115,6 +115,8 @@ app.post('/api/upload-batch', upload.array('files', 100), (req, res) => {
   const selRec = staged.find((s) => s.filename === selected_product);
   if (selRec) db.prepare(`UPDATE jobs SET input_path=? WHERE id=?`).run(selRec.path, jobId);
   updateMeta(jobId, { files: staged, products, parts, roots, selected_roots: null, selected_product });
+  // 上传即写入启发式根列表（产品优先）；驱动完成后会用实际根覆盖
+  db.prepare(`UPDATE jobs SET roots=? WHERE id=?`).run(JSON.stringify(roots), jobId);
 
   res.json({ jobId, status: 'pending', products, parts, roots, selected_product });
 });

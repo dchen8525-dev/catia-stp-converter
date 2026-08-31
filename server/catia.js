@@ -100,7 +100,8 @@ function runDriver(batchFiles, outDir, timeoutMs, forcedRoots) {
           .map((f) => ({ name: f, base: path.parse(f).name.toLowerCase(), path: path.join(outDir, f) }));
 
         if (!roots.length && !produced.length) {
-          return reject(new Error('驱动退出码 0，但未生成 .stp 文件'));
+          // cscript 对运行时错误仍可能返回 0，把驱动 stderr 带上便于定位
+          return reject(new Error(`驱动退出码 0，但未生成 .stp 文件${err ? '（驱动 stderr: ' + err.trim() + '）' : ''}`));
         }
         // 把每个根产品与其导出的 .stp 配对（按文件名 base 匹配）
         const byBase = {};
