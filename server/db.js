@@ -103,8 +103,12 @@ function getJob(id) {
   return db.prepare(`SELECT * FROM jobs WHERE id=?`).get(id);
 }
 
-function listJobs(limit = 100) {
-  return db.prepare(`SELECT * FROM jobs ORDER BY id DESC LIMIT ?`).all(limit);
+function listJobs(limit = 100, offset = 0) {
+  return db.prepare(`SELECT * FROM jobs ORDER BY id DESC LIMIT ? OFFSET ?`).all(limit, offset);
+}
+
+function countJobs() {
+  return db.prepare(`SELECT COUNT(*) AS n FROM jobs`).get().n;
 }
 
 function queuePosition(id) {
@@ -114,4 +118,4 @@ function queuePosition(id) {
   return row ? row.n : 0;
 }
 
-module.exports = { db, createJob, claimNext, completeJob, failJob, updateMeta, getJob, listJobs, queuePosition };
+module.exports = { db, createJob, claimNext, completeJob, failJob, updateMeta, getJob, listJobs, countJobs, queuePosition };

@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 const yazl = require('yazl');
-const { createJob, getJob, listJobs, queuePosition, updateMeta, db } = require('./db');
+const { createJob, getJob, listJobs, countJobs, queuePosition, updateMeta, db } = require('./db');
 const { loop: startWorker } = require('./worker');
 const { startCleanup } = require('./cleanup');
 
@@ -138,9 +138,13 @@ app.post('/api/jobs/:id/select-roots', (req, res) => {
   res.json({ jobId: j.id, status: 'pending', roots: roots || 'auto', selected_roots: roots });
 });
 
+// 分页任务列表（按 id 倒序，最新在前）。默认每页 50（上限 100），返回 { items, total, page, pageSize }
 app.get('/api/jobs', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit || '100', 10), 500);
-  res.json(listJobs(limit).map(publicView));
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 50, 1), 100);
+  const total = countJobs();
+  const items = listJobs(pageSize, (page - 1) * pageSize).map(publicView);
+  res.json({ items, total, page, pageSize });
 });
 
 app.get('/api/jobs/:id', (req, res) => {

@@ -90,7 +90,7 @@ node server/worker.js  # 只启动 Worker
 |---|---|---|
 | POST | `/api/upload-batch` | 多文件上传（字段名 `files`，支持 .CATPart/.CATProduct），返回 `{ jobId, products, parts, roots }` |
 | POST | `/api/jobs/:id/select-roots` | 改选要导出的根（body `{roots:[...]}`），任务重新入队；**不传 `roots`**（`selected_roots` 置 null）恢复自动探测，传空数组返回 400 |
-| GET | `/api/jobs` | 任务列表（含状态、根列表、STEP 列表、队列位、提交/完成时间） |
+| GET | `/api/jobs?page=1&pageSize=50` | 分页任务列表（按 id 倒序，最新在前；`page` 从 1 起，`pageSize` 默认 50、上限 100），返回 `{ items, total, page, pageSize }`，每条含状态、根列表、STEP 列表、队列位、提交/完成时间 |
 | GET | `/api/jobs/:id` | 单个任务状态 |
 | GET | `/api/download/:id` | 该任务 STEP：仅 1 个直接下载；多个则打包 zip |
 | GET | `/api/download/:id/:idx` | 下载该任务内第 `idx` 个 STEP（从 0 起） |
