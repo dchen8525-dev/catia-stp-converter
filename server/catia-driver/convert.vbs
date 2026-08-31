@@ -406,7 +406,7 @@ Function RunBatchAndWait(cmd, dst)
       ok = FileDone(dst)   ' it may still have finished while we waited
       Exit Do
     End If
-    WScript.Sleep 3000
+    WScript.Sleep 1000
   Loop
 
   ' cleanup: kill any leftover CNEXT so the license is free for the next root
@@ -424,7 +424,7 @@ Function FileDone(dst)
   If Not fso.FileExists(dst) Then Exit Function
   For i = 1 To 8
     s1 = fso.GetFile(dst).Size
-    WScript.Sleep 3000
+    WScript.Sleep 5000
     If Not fso.FileExists(dst) Then Exit Function
     s2 = fso.GetFile(dst).Size
     If s2 > 1024 And s2 = s1 Then
