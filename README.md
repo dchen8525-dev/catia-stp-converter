@@ -7,6 +7,19 @@ Web 服务：上传 CATIA 三维模型（`.CATPart` 零件 / `.CATProduct` 产�
 - **批量下载**：勾选多个已完成任务，或同一任务内的多个 STEP，打包成 zip 下载
 - **任务队列**：SQLite 持久化 + 单 Worker 串行，避免多个 CATIA 实例争抢 License
 
+## 技术栈
+
+| 层 | 选型 | 说明 |
+|---|---|---|
+| 语言 | Node.js ≥ 18（CommonJS） | 服务端全部 JavaScript，无 TS / 构建步骤 |
+| Web 框架 | Express 4 | 上传 / 下载 / 任务列表 API |
+| 数据库 | SQLite（better-sqlite3，WAL 模式） | 任务队列持久化，同步 API，文件在 `data/jobs.db` |
+| 文件上传 | multer | 多文件上传，落盘到 `uploads/<jobId>/` |
+| zip 打包 | yazl | 批量下载时把多个 STEP 打成 zip |
+| 前端 | 原生 HTML / CSS / JS（`public/index.html`） | 单文件页面，无框架、无打包 |
+| 转换驱动 | VBScript（cscript 运行） | COM IDispatch 晚绑定驱动 CATIA；.NET COM 互操作在本机不可用，故不用 PowerShell |
+| 转换引擎 | CATIA V5（本机安装） | 交互会话扫描引用 + 官方无头批处理 CATBatchStarter 导出 STEP |
+
 ## 工作原理
 
 ```
