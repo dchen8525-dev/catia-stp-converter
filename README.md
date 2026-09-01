@@ -51,8 +51,19 @@ Web 服务：上传 CATIA 三维模型（`.CATPart` 零件 / `.CATProduct` 产�
 ## 环境要求
 
 - Windows（CATIA V5 仅支持 Windows）
-- 已安装 CATIA V5
+- 已安装 CATIA V5，且证书（License）可用（需 **HD2 + ST1**，见下节）
 - Node.js ≥ 18
+
+## CATIA 证书（License）
+
+- **所需许可项：HD2 + ST1**（部署机实测，两个都要）：
+  - **HD2**（CATIA V5 Design Product 配置）：打开/装配 `CATPart`、`CATProduct` 所需。自动探测根时驱动启动的 CATIA 扫描会话（`convert.vbs` 里 `Documents.Open` 遍历引用）依赖它。
+  - **ST1**（STEP 3D 数据交换接口）：STEP 导出所需。导出走 Batch DXF-IGES-STEP（`CATBatchStarter`）产出 AP242 STEP，靠的就是它。
+  - 纯零件批次虽不启动扫描会话，但导出同样要经批处理打开并转换文档，两个许可仍都用到；缺任一项，任务会转换失败。MOCK 模式不调 CATIA，不占证书。
+- **前提**：部署机上的 CATIA V5 必须已正确授权，无头批处理（CATBatchStarter）与交互会话一样需要证书可用。建议部署时先手动打开一次 CATIA，确认能正常拿到 License，再启动本服务。
+- **占用方式**：本服务按「同一时刻至多一个 CATIA 实例」设计——SQLite 队列单 Worker 串行认领，避免多个 CATIA 实例同时争抢证书导致取不到。
+- **证书释放**：Worker 在启动时与每个任务结束后都会 `taskkill /IM CNEXT.exe /F` 强杀残留 CATIA 释放证书；自动探测根的扫描会话用完即 `catia.Quit`。因此服务所在登录会话不要同时被他人手动使用 CATIA（会被误杀，见「已知说明」）。
+- **排查提示**：转换失败若怀疑是证书问题，可先在同一账号下用 GUI 手动执行一次同样的导出验证。本部署机曾出现 STEP `ExportData` 持续 E_FAIL，已排除证书原因（是 API 路径问题，故改走官方批处理，见「工作原理」）。
 
 ## 安装与启动
 
